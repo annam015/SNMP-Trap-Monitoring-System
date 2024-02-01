@@ -1,0 +1,51 @@
+# Export SnmpTrapsReceiver and SnmpTrapsSender as Runnable JAR files before starting.
+
+
+# Setting up the Docker Container 'c01' - SNMP Trap Receiver 
+docker run --name c01 -p 3030:3030 -it critoma/linux-u20-dev-security-ism
+su - stud
+export NODE_HOME=/opt/software/node-v18.18.0-linux-x64
+export PATH=.:$NODE_HOME/bin:$PATH
+npm install mongodb@4
+sudo mkdir -p /data/db
+sudo mongod --port 27017
+
+# Open a new terminal and enter Docker Container 'c01'
+docker exec -u stud -it c01 /bin/bash
+cd ~
+export NODE_HOME=/opt/software/node-v18.18.0-linux-x64
+export PATH=.:$NODE_HOME/bin:$PATH
+mkdir -p eu/example/snmp/
+cd eu/example/snmp/
+touch initMongoDB.js
+nano initMongoDB.js
+// Copy the code from c01JsFiles -> initMongoDB.js
+node initMongoDB.js
+touch nodeWithMongoDB.js
+nano nodeWithMongoDB.js
+// Copy the code from c01JsFiles -> nodeWithMongoDB.js
+npm install express@4.18.2
+node nodeWithMongoDB.js
+
+# Open a new terminal and enter Docker Container 'c01'
+docker exec -u stud -it c01 /bin/bash
+cd ~
+export JAVA_HOME=/opt/software/jdk-21
+export PATH=.:$JAVA_HOME/bin:$PATH
+cd eu/example/snmp/
+// From another terminal: docker cp SnmpTrapsReceiver.jar c01:/home/stud/eu/example/snmp/
+java -jar SnmpTrapsReceiver.jar
+
+# Setting up the Docker Container 'c02' - SNMP Trap Sender
+docker run --name c02 -it critoma/linux-u20-dev-security-ism
+su - stud
+export JAVA_HOME=/opt/software/jdk-21
+export PATH=.:$JAVA_HOME/bin:$PATH
+mkdir -p eu/example/snmp/
+cd eu/example/snmp/
+// From another terminal: docker cp SnmpTrapsSender.jar c02:/home/stud/eu/example/snmp/
+java -jar SnmpTrapsSender.jar
+
+
+# Repeat the steps for 'c02' for any other container you wish to set up as an SNMP Trap Sender.
+# Access the Node.js web server at localhost:3030/traps to view the SNMP traps received by 'c01' and inserted into MongoDB.
